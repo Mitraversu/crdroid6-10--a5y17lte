@@ -95,7 +95,7 @@ jobs:
           fi
 
       - name: Upload SukiSU artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: SukiSU-Build
           path: |
