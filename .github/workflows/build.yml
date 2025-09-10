@@ -20,7 +20,7 @@ jobs:
 
       - name: Clone GCC 4.9.4 toolchain
         run: |
-          git clone --depth 1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
+          git clone --depth 1 https://github.com/KudProject/aarch64-linux-android-4.9 toolchain
           # Verify toolchain structure
           ls -l toolchain/bin
 
