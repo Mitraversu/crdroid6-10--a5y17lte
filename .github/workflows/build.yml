@@ -53,13 +53,11 @@ jobs:
             cp out/arch/arm64/boot/Image Image_KernelSU
           fi
 
-      - name: Upload KernelSU artifacts
+      - name: Upload KernelSU artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KernelSU-Build
-          path: |
-            Image_KernelSU*
-            out/**
+          name: KernelSU-Image
+          path: Image_KernelSU*
 
       ##################################
       # SukiSU build
@@ -94,10 +92,8 @@ jobs:
             cp out/arch/arm64/boot/Image Image_SukiSU
           fi
 
-      - name: Upload SukiSU artifacts
+      - name: Upload SukiSU artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SukiSU-Build
-          path: |
-            Image_SukiSU*
-            out/**
+          name: SukiSU-Image
+          path: Image_SukiSU*
