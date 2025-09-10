@@ -1,0 +1,103 @@
+name: Kernel Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kernel source
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev \
+            git ccache curl wget python3 coccinelle
+
+      - name: Clone GCC 4.9.4 toolchain
+        run: |
+          git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
+
+      - name: Set environment variables
+        run: |
+          echo "CROSS_COMPILE=${GITHUB_WORKSPACE}/toolchain/bin/aarch64-linux-android-" >> $GITHUB_ENV
+          echo "ARCH=arm64" >> $GITHUB_ENV
+          echo "SUBARCH=arm64" >> $GITHUB_ENV
+
+      ##################################
+      # KernelSU build
+      ##################################
+      - name: Apply KernelSU patch
+        run: |
+          git clone https://github.com/devnoname120/kernelsu-coccinelle
+          cd kernelsu-coccinelle/scope-minimized-hooks
+          ./apply.sh ${GITHUB_WORKSPACE}
+
+      - name: Build Kernel with KernelSU
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          mkdir -p out
+          make O=out clean
+          make O=out mrproper
+          make O=out lineage-a5y17lte_defconfig
+          make O=out -j$(nproc --all)
+
+          # Rename output
+          if [ -f out/arch/arm64/boot/Image.gz-dtb ]; then
+            cp out/arch/arm64/boot/Image.gz-dtb Image_KernelSU.gz-dtb
+          elif [ -f out/arch/arm64/boot/Image.gz ]; then
+            cp out/arch/arm64/boot/Image.gz Image_KernelSU.gz
+          elif [ -f out/arch/arm64/boot/Image ]; then
+            cp out/arch/arm64/boot/Image Image_KernelSU
+          fi
+
+      - name: Upload KernelSU artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: KernelSU-Build
+          path: |
+            Image_KernelSU*
+            out/**
+
+      ##################################
+      # SukiSU build
+      ##################################
+      - name: Clean kernel tree
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          rm -rf out
+          git reset --hard
+          git clean -fdx
+
+      - name: Apply SukiSU Ultra patch
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s nongki
+
+      - name: Build Kernel with SukiSU
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          mkdir -p out
+          make O=out clean
+          make O=out mrproper
+          make O=out lineage-a5y17lte_defconfig
+          make O=out -j$(nproc --all)
+
+          # Rename output
+          if [ -f out/arch/arm64/boot/Image.gz-dtb ]; then
+            cp out/arch/arm64/boot/Image.gz-dtb Image_SukiSU.gz-dtb
+          elif [ -f out/arch/arm64/boot/Image.gz ]; then
+            cp out/arch/arm64/boot/Image.gz Image_SukiSU.gz
+          elif [ -f out/arch/arm64/boot/Image ]; then
+            cp out/arch/arm64/boot/Image Image_SukiSU
+          fi
+
+      - name: Upload SukiSU artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: SukiSU-Build
+          path: |
+            Image_SukiSU*
+            out/**
