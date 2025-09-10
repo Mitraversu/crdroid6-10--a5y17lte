@@ -14,17 +14,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc bison flex libssl-dev \
-            git ccache curl wget python3 coccinelle
+            git ccache curl wget python3 coccinelle gcc-aarch64-linux-gnu
+          # Install a newer dtc to avoid linker issues
+          sudo apt-get install -y device-tree-compiler
 
       - name: Clone GCC 4.9.4 toolchain
         run: |
-          git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
+          git clone --depth 1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
+          # Verify toolchain structure
+          ls -l toolchain/bin
 
       - name: Set environment variables
         run: |
-          echo "CROSS_COMPILE=${GITHUB_WORKSPACE}/toolchain/aarch64-linux-android-4.9/bin/aarch64-linux-android-" >> $GITHUB_ENV
+          echo "CROSS_COMPILE=${GITHUB_WORKSPACE}/toolchain/bin/aarch64-linux-android-" >> $GITHUB_ENV
           echo "ARCH=arm64" >> $GITHUB_ENV
           echo "SUBARCH=arm64" >> $GITHUB_ENV
+          echo "PATH=${GITHUB_WORKSPACE}/toolchain/bin:$PATH" >> $GITHUB_ENV
 
       ##################################
       # KernelSU build
@@ -41,9 +46,10 @@ jobs:
           mkdir -p out
           make O=out clean
           make O=out mrproper
+          # Modify defconfig to disable CONFIG_CC_STACKPROTECTOR_STRONG
+          sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/lineage-a5y17lte_defconfig
           make O=out lineage-a5y17lte_defconfig
           make O=out -j$(nproc --all)
-
           # Rename output
           if [ -f out/arch/arm64/boot/Image.gz-dtb ]; then
             cp out/arch/arm64/boot/Image.gz-dtb Image_KernelSU.gz-dtb
@@ -82,9 +88,10 @@ jobs:
           mkdir -p out
           make O=out clean
           make O=out mrproper
+          # Modify defconfig to disable CONFIG_CC_STACKPROTECTOR_STRONG
+          sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/lineage-a5y17lte_defconfig
           make O=out lineage-a5y17lte_defconfig
           make O=out -j$(nproc --all)
-
           # Rename output
           if [ -f out/arch/arm64/boot/Image.gz-dtb ]; then
             cp out/arch/arm64/boot/Image.gz-dtb Image_SukiSU.gz-dtb
